@@ -9,6 +9,8 @@ library(skimr)
 library(ggplot2)
 library(tidyr)
 library(forcats)
+library(sf)
+library(readr)
 
 #Part 1 Section 1 (Setup & Import)
 #import the line list
@@ -347,6 +349,22 @@ ggplot(hospital_cases, aes(x = n, y = clean_hospital, fill = n)) +
   xlim(0, max(hospital_cases$n) * 1.15)  # Make room for labels
 
 ggsave("cases_by_hospital.png", width = 10, height = 7, dpi = 300)
+
+
+##==Part 2 =====##
+##Geospatial Visualisation
+
+shapefile <- st_read("./nga_admin_boundaries.shp.zip")
+
+immun_data <- read.csv("./immunization_subnational_nga.csv")
+
+# Inspect both datasets
+head(shapefile)
+head(immun_data)
+names(shapefile)
+names(immun_data) 
+
+
 
 
 
