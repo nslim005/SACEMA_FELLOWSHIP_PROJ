@@ -322,7 +322,7 @@ ggplot(hosp_trends, aes(x = year_month, y = cases)) +
 # Save
 ggsave("hospitalisation_trends.png", width = 10, height = 6, dpi = 300)
 
-# 2. 
+
 
 # 3. Count cases by hospital
 hospital_cases <- clean_linelist %>%
@@ -354,19 +354,76 @@ ggsave("cases_by_hospital.png", width = 10, height = 7, dpi = 300)
 ##==Part 2 =====##
 ##Geospatial Visualisation
 
-shapefile <- st_read("./nga_admin_boundaries.shp.zip")
+list.files("./nga_adm_osgof_20190417_em_SHP/")
+
+nigeria_state_shp <- st_read("./nga_adm_osgof_20190417_em_SHP/nga_admbnda_adm1_osgof_20190417_em.shp")
+nrow(nigeria_state_shp)
 
 immun_data <- read.csv("./immunization_subnational_nga.csv")
 
 # Inspect both datasets
-head(shapefile)
+head(nigeria_lga_shp$ADM1_EN)
 head(immun_data)
-names(shapefile)
+
+names(nigeria_state_shp)
 names(immun_data) 
 
 
+# Clean state names for joining
+nigeria_state_shp <- nigeria_state_shp %>%
+  mutate(
+    region_clean = str_to_upper(str_trim(ADM1_EN))
+  )
 
+unique(immun_data$Indicator)  # See the available vaccines
+unique(immun_data$SurveyYear)  # See the available years
 
+#filter for a single vaccine and a year
+
+bcg_received_2024 <- immun_data %>%
+  filter(
+    str_detect(Indicator,"BCG vaccination received"), SurveyYear == 2024,!is.na(Value)) %>%
+  mutate(
+    region_clean = str_to_upper(str_trim(Location))
+  ) %>%
+  select(region_clean, Value, Indicator, SurveyYear)
+
+# handle join
+map_data <- nigeria_state_shp %>%
+  left_join(bcg_received_2024, by = "region_clean")
+
+#plot
+ggplot(map_data) +
+  geom_sf(aes(fill = Value), color = "white", linewidth = 0.3) +
+  
+  # Color scale - choose one:
+  
+  scale_fill_gradient(
+    low = "#fee8c8",      # Light tan (low coverage)
+    high = "#7f0000",     # Dark red (high coverage)
+    na.value = "grey70",  # Grey for missing data
+    name = "BCG\nCoverage (%)",
+    labels = function(x) paste0(x, "%")
+  ) +
+  
+  labs(
+    title = "BCG Coverage by State, Nigeria 2024",
+    subtitle = "Percentage of children aged 12-23 months who received BCG vaccine",
+    caption = "Source: DHS Subnational Data via HDX | Nigeria subnational Boundaries: OCHA/OSGOF"
+  ) +
+  
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 10, color = "grey40"),
+    legend.position = "right",
+    panel.grid = element_blank(),
+    axis.text = element_blank(),
+    axis.title = element_blank()
+  )
+
+# Save
+ggsave("Nigeria_bcg_coverage.png", width = 10, height = 10, dpi = 300)
 
 
 
